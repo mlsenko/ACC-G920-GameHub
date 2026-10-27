@@ -1,0 +1,24 @@
+name: Question / help
+description: Ask for help getting the G920 working with GameHub + ACC
+title: "[Help] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for writing. Describe where you are stuck — I’ll help when I can.
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: Mac model, macOS version, GameHub version if known, ACC via Steam
+      placeholder: e.g. MacBook Pro M1, macOS 15, GameHub …, ACC Steam 805550
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you need?
+      description: What you tried and what happens (error text, menu-bar status, etc.)
+    validations:
+      required: true

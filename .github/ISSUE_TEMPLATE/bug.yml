@@ -1,0 +1,33 @@
+name: Bug report
+description: Something is broken with the shim, app, or FFB
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The more detail you give, the faster I can help.
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: Mac, macOS, GameHub, wheel (G920 power brick on?)
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Extra detail (optional)
+      description: Menu-bar status text, `/tmp/g920-ffb.log` snippet, screenshots

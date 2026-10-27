@@ -1,0 +1,34 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Private notes (local research, not for publish)
+*.local.md
+
+# Local build scratch (ready app lives in dist/)
+app/G920.app/
+app/libSDL2-2.0.0.dylib
+build/
+**/build/
+*.o
+
+# Do not ignore the shipped app or its bundled shim
+*.dylib
+!dist/**/*.dylib
+!app/Assets.xcassets/**
+
+# Xcode / Swift
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Editor scratch
+.idea/
+*.swp
+*~
+
+# Archives and dumps
+*.zip
+*.dmg
+*.log
+/tmp/
