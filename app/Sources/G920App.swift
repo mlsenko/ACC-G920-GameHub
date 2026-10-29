@@ -147,6 +147,8 @@ enum Preflight {
         var report = PreflightReport()
         WheelModel.writeTune(tune, directory: supportURL, url: confURL)
 
+        // Survives reboot: LoginAgent sets MFI=0 early at login.
+        installLoginEnvAgent()
         let mfiBefore = shell("/bin/launchctl", ["getenv", "SDL_JOYSTICK_MFI"]).trimmingCharacters(in: .whitespacesAndNewlines)
         _ = shell("/bin/launchctl", ["setenv", "SDL_JOYSTICK_MFI", "0"])
         _ = shell("/bin/launchctl", ["unsetenv", "WINEENGINE_STEAM_GAMEPAD_COMPAT_MODE"])
@@ -174,16 +176,71 @@ enum Preflight {
             report.note = "В приложении нет файла отдачи. Возьми свежий G920.app из репозитория."
         }
 
-        let mfiNeedsRestart = mfiBefore != "0" && gameHubRunning
-        if (compat.changed || mfiNeedsRestart) && gameHubRunning {
+        // GameHub keeps the env from process start. After reboot it often launches
+        // before MFI=0 is set; only a full GameHub relaunch picks up the new env.
+        let bootId = currentBootId()
+        let stampURL = supportURL.appendingPathComponent("mfi-ready-boot")
+        let stampedBoot = (try? String(contentsOf: stampURL, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !gameHubRunning {
+            try? bootId.write(to: stampURL, atomically: true, encoding: .utf8)
+        }
+        let needsEnvRelaunch = gameHubRunning && (mfiBefore != "0" || stampedBoot != bootId)
+        if (compat.changed || needsEnvRelaunch) && gameHubRunning {
             report.gameHubNeedsRestart = true
-            report.note = "Закрой GameHub полностью (не только окно) и открой снова — иначе оси руля не подхватятся."
+            report.note = "Закрой GameHub полностью и открой снова — иначе оси руля не подхватятся. После обновления macOS проверь: Системные настройки → Конфиденциальность → Мониторинг ввода → GameHub."
         }
 
         if !report.wheelConnected && report.note == nil {
             report.note = "Блок питания руля должен быть включён, не только USB."
         }
         return report
+    }
+
+    nonisolated private static func currentBootId() -> String {
+        var boot = timeval()
+        var size = MemoryLayout<timeval>.size
+        let ok = sysctlbyname("kern.boottime", &boot, &size, nil, 0) == 0
+        if ok {
+            return "\(boot.tv_sec).\(boot.tv_usec)"
+        }
+        return "unknown"
+    }
+
+    /// Tiny LaunchAgent: only `launchctl setenv SDL_JOYSTICK_MFI 0` at login.
+    /// Does not open the menu-bar app.
+    nonisolated private static func installLoginEnvAgent() {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let agents = home.appendingPathComponent("Library/LaunchAgents")
+        let plist = agents.appendingPathComponent("com.mlsenko.g920.env.plist")
+        let body = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+        	<key>Label</key>
+        	<string>com.mlsenko.g920.env</string>
+        	<key>ProgramArguments</key>
+        	<array>
+        		<string>/bin/launchctl</string>
+        		<string>setenv</string>
+        		<string>SDL_JOYSTICK_MFI</string>
+        		<string>0</string>
+        	</array>
+        	<key>RunAtLoad</key>
+        	<true/>
+        </dict>
+        </plist>
+        """
+        try? FileManager.default.createDirectory(at: agents, withIntermediateDirectories: true)
+        let existing = (try? String(contentsOf: plist, encoding: .utf8)) ?? ""
+        if existing != body {
+            try? body.write(to: plist, atomically: true, encoding: .utf8)
+        }
+        let uid = getuid()
+        _ = shell("/bin/launchctl", ["bootout", "gui/\(uid)/com.mlsenko.g920.env"])
+        _ = shell("/bin/launchctl", ["bootstrap", "gui/\(uid)", plist.path])
+        _ = shell("/bin/launchctl", ["enable", "gui/\(uid)/com.mlsenko.g920.env"])
+        _ = shell("/bin/launchctl", ["kickstart", "-k", "gui/\(uid)/com.mlsenko.g920.env"])
     }
 
     nonisolated private static func gameHubPresent() -> Bool {

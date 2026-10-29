@@ -26,6 +26,10 @@ Maintained by [**mlsenko**](https://github.com/mlsenko).
    - If it asks to restart GameHub: quit GameHub fully (not just the window) and open it again — once.
 5. Start ACC from GameHub, bind the wheel, drive. Adjust **Сила** / **Потолок** / **Инверсия** on the fly.
 
+**After a Mac reboot or macOS update:** open **G920** first, then fully quit and reopen **GameHub**, then launch ACC. `SDL_JOYSTICK_MFI=0` does not stick across reboot until the login helper has run; GameHub only picks it up at process start. Also re-check **System Settings → Privacy & Security → Input Monitoring → GameHub** (updates sometimes clear it).
+
+Since v1.1 the app installs a tiny login helper `~/Library/LaunchAgents/com.mlsenko.g920.env.plist` that only runs `launchctl setenv SDL_JOYSTICK_MFI 0` at login. To remove it: `launchctl bootout gui/$(id -u)/com.mlsenko.g920.env` and delete that file.
+
 If something looks wrong, press **Починить** in the panel.
 
 ### Knobs
